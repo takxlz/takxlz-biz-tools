@@ -1,0 +1,16 @@
+{
+  "name": "excel-to-oracle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Excel（1シートに複数テーブル）から Oracle へ INSERT するセットアップツール",
+  "bin": {
+    "excel-to-oracle": "./excel-to-oracle.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "oracledb": "^6.0.0"
+  }
+}
