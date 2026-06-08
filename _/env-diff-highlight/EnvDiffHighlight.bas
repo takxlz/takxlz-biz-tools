@@ -1,8 +1,8 @@
-Attribute VB_Name = "EnvDiffColor"
+Attribute VB_Name = "EnvDiffHighlight"
 Option Explicit
 
 ' ============================================================
-' EnvDiffColor
+' EnvDiffHighlight
 ' TSV( file / key / 種別 / env1..envN / description )を扱う Excel マクロ群。
 '
 ' 公開マクロ:
