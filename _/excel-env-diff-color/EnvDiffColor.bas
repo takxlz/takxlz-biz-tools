@@ -3,8 +3,15 @@ Option Explicit
 
 ' ============================================================
 ' EnvDiffColor
-' TSV( file / key / 種別 / env1..envN / description )を貼り付けたシートで、
-' 各行の env 列を「値の種類ごと」に色分けするマクロ。
+' TSV( file / key / 種別 / env1..envN / description )を扱う Excel マクロ群。
+'
+' 公開マクロ:
+'   ColorEnvDiff       … アクティブシートの env 列を値の種類ごとに色分け
+'   ImportTsv          … TSV を全列文字列・UTF-8 で新規ブックに取り込む
+'   ImportTsvAndColor  … 取り込み → 色分けまで一括実行
+'
+' --- 色分けについて ---
+' 各行の env 列を「値の種類ごと」に色分けする。
 '
 ' 配色ルール（1行ごとに独立して判定）:
 '   1. env セルを値でグループ化する（空セルも1つの値として扱う）。
@@ -74,6 +81,97 @@ Sub ColorEnvDiff()
     MsgBox "完了: " & (lastRow - HEADER_ROW) & " 行を処理しました" & _
            "（env 列 " & (envLast - envFirst + 1) & " 列）。", vbInformation
 End Sub
+
+' TSV ファイルを選択し、全列を文字列として新規ブックに取り込む。
+' 取り込みのみ（色分けは行わない）。
+Sub ImportTsv()
+    Dim filePath As String
+    If Not PickTsvFile(filePath) Then Exit Sub ' キャンセル
+    OpenTsvAsText filePath
+End Sub
+
+' TSV ファイルを取り込み、そのまま env 列の色分けまで実行する。
+Sub ImportTsvAndColor()
+    Dim filePath As String
+    If Not PickTsvFile(filePath) Then Exit Sub ' キャンセル
+    OpenTsvAsText filePath
+    ColorEnvDiff
+End Sub
+
+' TSV ファイル選択ダイアログを表示する。
+' @param outPath 選択されたパスを受け取る（参照渡し）
+' @returns 選択されたら True、キャンセルなら False
+Private Function PickTsvFile(ByRef outPath As String) As Boolean
+    Dim picked As Variant
+    picked = Application.GetOpenFilename( _
+        FileFilter:="TSV/テキスト (*.tsv;*.txt;*.tab),*.tsv;*.txt;*.tab", _
+        Title:="取り込む TSV を選択")
+    If VarType(picked) = vbBoolean Then
+        PickTsvFile = False ' キャンセル時は False が返る
+    Else
+        outPath = CStr(picked)
+        PickTsvFile = True
+    End If
+End Function
+
+' TSV を全列文字列・UTF-8 として新規ブックに開く。
+' 全列を xlTextFormat にすることで、先頭ゼロ・日付・真偽値などの
+' 自動型変換を防ぎ、差分比較が崩れないようにする。
+' @param filePath 取り込む TSV のパス
+Private Sub OpenTsvAsText(filePath As String)
+    Dim colCount As Long
+    colCount = CountColumns(filePath)
+    If colCount < 1 Then
+        MsgBox "ファイルが空、または読み取れません。", vbExclamation
+        Exit Sub
+    End If
+
+    ' 全列を文字列(xlTextFormat=2)で取り込む FieldInfo を構築
+    Dim fieldInfo() As Variant
+    ReDim fieldInfo(1 To colCount)
+    Dim i As Long
+    For i = 1 To colCount
+        fieldInfo(i) = Array(i, 2) ' 2 = xlTextFormat
+    Next i
+
+    ' Origin:=65001 で UTF-8 として解釈、タブ区切りで分割
+    Workbooks.OpenText _
+        Filename:=filePath, _
+        Origin:=65001, _
+        StartRow:=1, _
+        DataType:=xlDelimited, _
+        Tab:=True, Semicolon:=False, Comma:=False, Space:=False, Other:=False, _
+        FieldInfo:=fieldInfo, _
+        TrailingMinusNumbers:=True
+End Sub
+
+' 先頭行のタブ数 + 1 で列数を数える。
+' タブ(0x09)は UTF-8 マルチバイト列と衝突しないため、
+' 文字エンコーディングの影響を受けずに列数を確定できる。
+' @param filePath 対象 TSV のパス
+' @returns 列数。空ファイル等で読めなければ 0。
+Private Function CountColumns(filePath As String) As Long
+    Dim fileNum As Integer, firstLine As String
+    fileNum = FreeFile
+    Open filePath For Input As #fileNum
+    If Not EOF(fileNum) Then Line Input #fileNum, firstLine
+    Close #fileNum
+
+    If Len(firstLine) = 0 Then
+        CountColumns = 0
+        Exit Function
+    End If
+
+    Dim tabs As Long, p As Long
+    tabs = 0
+    p = InStr(1, firstLine, vbTab)
+    Do While p > 0
+        tabs = tabs + 1
+        p = InStr(p + 1, firstLine, vbTab)
+    Loop
+
+    CountColumns = tabs + 1
+End Function
 
 ' 1行分の env セルを色分けする。
 ' @param ws       対象シート
