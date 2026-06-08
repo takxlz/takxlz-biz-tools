@@ -14,6 +14,8 @@ node tsv-mark-matches.js <入力TSV|-> <ファイル名リスト> [options]
 - `<入力TSV|->` … 入力TSV のパス。`-` で標準入力から読む
 - `<ファイル名リスト>` … 1行1ファイル名のテキスト
 - `-c`, `--match-col <名前\|番号>` … マッチ対象列（既定は最左列）
+- `-m`, `--mark <印>` … 一致時に付ける印（既定 `●`）
+- `-H`, `--header <名前>` … 追加する列のヘッダ名（既定 `match`）
 - `-o`, `--out <file>` … 結果をファイルへ書き出す（**指定時は標準出力に出さない**）
 - `-q`, `--quiet` … 標準エラーへのサマリを抑制する
 - `-h`, `--help` … 使い方を表示
@@ -26,6 +28,9 @@ node tsv-mark-matches.js properties.tsv filelist.txt > marked.tsv
 node tsv-mark-matches.js properties.tsv filelist.txt --match-col file > marked.tsv
 node tsv-mark-matches.js properties.tsv filelist.txt --match-col 1    > marked.tsv
 node tsv-mark-matches.js properties.tsv filelist.txt -c file          > marked.tsv
+
+# 印・追加列名を変更（既定は ● / match）
+node tsv-mark-matches.js properties.tsv filelist.txt -c file --mark X --header 一致 > marked.tsv
 
 # --out でファイルへ（標準出力は沈黙。トークン節約・Git Bash 安全）
 node tsv-mark-matches.js properties.tsv filelist.txt -c file --out marked.tsv
@@ -81,7 +86,7 @@ messages.properties
 ## 出力
 
 - 元の列はそのまま保持し、**最右**に新規列を 1 つ追加する。
-- 追加列のヘッダ名は既定で `match`。一致行は `●`、非一致行は空セル（列数を揃える）。
+- 追加列のヘッダ名は既定で `match`（`-H`/`--header` で変更可）。一致行は `●`（`-m`/`--mark` で変更可）、非一致行は空セル（列数を揃える）。
 - 結果はタブ区切りで標準出力（既定）または `--out` のファイルへ。改行は LF に正規化する。
 
 ### 出力先と標準エラーのサマリ
@@ -98,12 +103,13 @@ tsv-mark-matches: 読込 1000 行 → 一致 42 行 → marked.tsv
 ## テスト
 
 ```sh
-node --test "tools/tsv-mark-matches/*.test.js"
+node --test "tsv-mark-matches/*.test.js"
 ```
 
 ## メモ
 
 - 追加依存なし（Node 標準のみ）。
 - CLI は大きめの入力を想定し、`readline` で 1 行ずつ処理する（全行をメモリに展開しない）。
-- 追加列のヘッダ名（既定 `match`）と印（既定 `●`）は、`markMatches` /
-  `markMatchesStream` の `options`（`columnHeader` / `mark`）で変更できる。
+- 印（既定 `●`）と追加列のヘッダ名（既定 `match`）は、CLI では `-m`/`--mark`・
+  `-H`/`--header` で、ライブラリ利用時は `markMatches` / `markMatchesStream` の
+  `options`（`mark` / `columnHeader`）で変更できる。
